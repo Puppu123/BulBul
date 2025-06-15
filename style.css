@@ -1,3 +1,4 @@
+
 * {
     margin: 0;
     padding: 0;
@@ -144,6 +145,8 @@ h1 {
     gap: 20px;
     padding: 40px 0;
     animation: fadeInUp 0.8s ease-out;
+    contain: layout style paint; /* CSS containment for better performance */
+    will-change: transform; /* Optimize for animations */
 }
 
 .movie-card {
@@ -222,6 +225,16 @@ h1 {
     height: 300px;
     object-fit: cover;
     display: block;
+    transition: opacity 0.3s ease;
+}
+
+.movie-poster.lazy {
+    opacity: 0.7;
+    background: linear-gradient(45deg, #1a1a1a, #2d2d2d);
+}
+
+.movie-poster:not(.lazy) {
+    opacity: 1;
 }
 
 .movie-info {
