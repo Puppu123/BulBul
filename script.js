@@ -1,7 +1,7 @@
 
 class MovieWebsite {
     constructor() {
-        this.movies = JSON.parse(localStorage.getItem('movies')) || [];
+        this.movies = [];
         this.currentPage = 1;
         this.moviesPerPage = 20;
         this.filteredMovies = [...this.movies];
@@ -12,13 +12,12 @@ class MovieWebsite {
     
     init() {
         this.setupEventListeners();
-        this.displayMovies();
-        this.setupPagination();
+        this.loadMoviesFromFirestore();
         this.updateAdminButton();
         
         // Create directories if they don't exist (simulated)
         if (!localStorage.getItem('moviesInitialized')) {
-            this.initializeDefaultMovies();
+            // this.initializeDefaultMovies();
             localStorage.setItem('moviesInitialized', 'true');
         }
     }
@@ -92,7 +91,26 @@ class MovieWebsite {
         
         loginForm.addEventListener('submit', (e) => {
             e.preventDefault();
-            this.handleLogin();
+            this.
+    async loadMoviesFromFirestore() {
+        const snapshot = await db.collection("movies").orderBy("dateAdded", "desc").get();
+        this.movies = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        this.filteredMovies = [...this.movies];
+        this.displayMovies();
+        this.setupPagination();
+    }
+
+    async saveMovieToFirestore(movie) {
+        const docRef = await db.collection("movies").add(movie);
+        movie.id = docRef.id;
+        this.movies.unshift(movie);
+        this.filteredMovies = [...this.movies];
+        this.displayMovies();
+        this.setupPagination();
+    }
+
+
+    handleLogin();
         });
         
         adminForm.addEventListener('submit', (e) => {
@@ -132,7 +150,7 @@ class MovieWebsite {
         
         this.movies = sampleMovies;
         this.filteredMovies = [...this.movies];
-        this.saveMovies();
+        this.saveMovieToFirestore(newMovie);
     }
     
     searchMovies(query) {
@@ -148,8 +166,7 @@ class MovieWebsite {
         }
         
         this.currentPage = 1;
-        this.displayMovies();
-        this.setupPagination();
+        this.loadMoviesFromFirestore();
     }
     
     displayMovies() {
@@ -304,7 +321,7 @@ class MovieWebsite {
         
         // Previous button
         if (this.currentPage > 1) {
-            const prevBtn = this.createPageButton('â€¹', this.currentPage - 1);
+            const prevBtn = this.createPageButton('‹', this.currentPage - 1);
             pagination.appendChild(prevBtn);
         }
         
@@ -342,7 +359,7 @@ class MovieWebsite {
         
         // Next button
         if (this.currentPage < totalPages) {
-            const nextBtn = this.createPageButton('â€º', this.currentPage + 1);
+            const nextBtn = this.createPageButton('›', this.currentPage + 1);
             pagination.appendChild(nextBtn);
         }
     }
@@ -425,7 +442,7 @@ class MovieWebsite {
         
         this.movies.unshift(newMovie); // Add to beginning
         this.filteredMovies = [...this.movies];
-        this.saveMovies();
+        this.saveMovieToFirestore(newMovie);
         
         // Reset form
         document.getElementById('adminForm').reset();
@@ -436,8 +453,7 @@ class MovieWebsite {
         document.getElementById('fileInputs').style.display = 'none';
         
         // Refresh displays
-        this.displayMovies();
-        this.setupPagination();
+        this.loadMoviesFromFirestore();
         this.displayAdminMovies();
         
         alert('Movie added successfully!');
@@ -489,18 +505,31 @@ class MovieWebsite {
         if (confirm('Are you sure you want to delete this movie?')) {
             this.movies = this.movies.filter(movie => movie.id !== movieId);
             this.filteredMovies = this.filteredMovies.filter(movie => movie.id !== movieId);
-            this.saveMovies();
+            this.saveMovieToFirestore(newMovie);
             
             this.displayMovies();
             this.setupPagination();
             this.displayAdminMovies();
         }
     }
-    
-    saveMovies() {
-        localStorage.setItem('movies', JSON.stringify(this.movies));
+    async loadMoviesFromFirestore() {
+        const snapshot = await db.collection("movies").orderBy("dateAdded", "desc").get();
+        this.movies = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        this.filteredMovies = [...this.movies];
+        this.displayMovies();
+        this.setupPagination();
     }
-    
+
+    async saveMovieToFirestore(movie) {
+        const docRef = await db.collection("movies").add(movie);
+        movie.id = docRef.id;
+        this.movies.unshift(movie);
+        this.filteredMovies = [...this.movies];
+        this.displayMovies();
+        this.setupPagination();
+    }
+
+
     handleLogin() {
         const passwordInput = document.getElementById('adminPassword');
         const password = passwordInput.value;
