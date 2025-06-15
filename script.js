@@ -110,6 +110,25 @@ class MovieWebsite {
     }
 
 
+    
+    async loadMoviesFromFirestore() {
+        const snapshot = await db.collection("movies").orderBy("dateAdded", "desc").get();
+        this.movies = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        this.filteredMovies = [...this.movies];
+        this.displayMovies();
+        this.setupPagination();
+    }
+
+    async saveMovieToFirestore(movie) {
+        const docRef = await db.collection("movies").add(movie);
+        movie.id = docRef.id;
+        this.movies.unshift(movie);
+        this.filteredMovies = [...this.movies];
+        this.displayMovies();
+        this.setupPagination();
+    }
+
+
     handleLogin();
         });
         
@@ -512,6 +531,25 @@ class MovieWebsite {
             this.displayAdminMovies();
         }
     }
+    async loadMoviesFromFirestore() {
+        const snapshot = await db.collection("movies").orderBy("dateAdded", "desc").get();
+        this.movies = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        this.filteredMovies = [...this.movies];
+        this.displayMovies();
+        this.setupPagination();
+    }
+
+    async saveMovieToFirestore(movie) {
+        const docRef = await db.collection("movies").add(movie);
+        movie.id = docRef.id;
+        this.movies.unshift(movie);
+        this.filteredMovies = [...this.movies];
+        this.displayMovies();
+        this.setupPagination();
+    }
+
+
+    
     async loadMoviesFromFirestore() {
         const snapshot = await db.collection("movies").orderBy("dateAdded", "desc").get();
         this.movies = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
