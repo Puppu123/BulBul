@@ -2,7 +2,7 @@ class MovieWebsite {
     constructor() {
         this.movies = [];
         this.currentPage = 1;
-        this.moviesPerPage = 20;
+        this.moviesPerPage = 50;
         this.filteredMovies = [];
         this.searchTimeout = null;
 
@@ -19,12 +19,9 @@ class MovieWebsite {
         const searchInput = document.getElementById('searchInput');
         const searchBtn = document.getElementById('searchBtn');
 
-        searchInput.addEventListener('input', (e) => {
-            clearTimeout(this.searchTimeout);
-            this.searchTimeout = setTimeout(() => {
-                this.searchMovies(e.target.value);
-            }, 300);
-        });
+        searchInput.addEventListener('input', this.debounce((e) => {
+            this.searchMovies(e.target.value);
+        }, 150));
 
         searchBtn.addEventListener('click', () => {
             this.searchMovies(searchInput.value);
@@ -34,22 +31,16 @@ class MovieWebsite {
             if (e.target.name === 'inputMethod') {
                 const urlInputs = document.getElementById('urlInputs');
                 const fileInputs = document.getElementById('fileInputs');
-
-                if (e.target.value === 'url') {
-                    urlInputs.style.display = 'block';
-                    fileInputs.style.display = 'none';
-                } else {
-                    urlInputs.style.display = 'none';
-                    fileInputs.style.display = 'block';
-                }
+                urlInputs.style.display = e.target.value === 'url' ? 'block' : 'none';
+                fileInputs.style.display = e.target.value === 'file' ? 'block' : 'none';
             }
         });
 
         const adminBtn = document.getElementById('adminBtn');
         const adminModal = document.getElementById('adminModal');
         const loginModal = document.getElementById('loginModal');
-        const closeBtn = document.querySelector('.close');
-        const loginCloseBtn = document.querySelector('.login-close');
+        const closeBtn = adminModal.querySelector('.close');
+        const loginCloseBtn = loginModal.querySelector('.close');
         const adminForm = document.getElementById('adminForm');
         const loginForm = document.getElementById('loginForm');
 
@@ -62,13 +53,8 @@ class MovieWebsite {
             }
         });
 
-        closeBtn.addEventListener('click', () => {
-            adminModal.style.display = 'none';
-        });
-
-        loginCloseBtn.addEventListener('click', () => {
-            loginModal.style.display = 'none';
-        });
+        closeBtn.addEventListener('click', () => adminModal.style.display = 'none');
+        loginCloseBtn.addEventListener('click', () => loginModal.style.display = 'none');
 
         window.addEventListener('click', (e) => {
             if (e.target === adminModal) adminModal.style.display = 'none';
@@ -104,17 +90,13 @@ class MovieWebsite {
     }
 
     searchMovies(query) {
-        const searchTerm = query.toLowerCase().trim();
-
-        if (searchTerm === '') {
-            this.filteredMovies = [...this.movies];
-        } else {
-            this.filteredMovies = this.movies.filter(movie =>
-                movie.title.toLowerCase().includes(searchTerm) ||
-                movie.description.toLowerCase().includes(searchTerm)
+        const term = query.toLowerCase().trim();
+        this.filteredMovies = term === ''
+            ? [...this.movies]
+            : this.movies.filter(movie =>
+                movie.title.toLowerCase().includes(term) ||
+                movie.description.toLowerCase().includes(term)
             );
-        }
-
         this.currentPage = 1;
         this.displayMovies();
         this.setupPagination();
@@ -123,18 +105,16 @@ class MovieWebsite {
     displayMovies() {
         const movieGrid = document.getElementById('movieGrid');
         const loading = document.getElementById('loading');
-
         loading.style.display = 'block';
 
-        setTimeout(() => {
-            const startIndex = (this.currentPage - 1) * this.moviesPerPage;
-            const endIndex = startIndex + this.moviesPerPage;
-            const moviesToShow = this.filteredMovies.slice(startIndex, endIndex);
+        requestAnimationFrame(() => {
+            const start = (this.currentPage - 1) * this.moviesPerPage;
+            const end = start + this.moviesPerPage;
+            const moviesToShow = this.filteredMovies.slice(start, end);
 
             movieGrid.innerHTML = '';
-
             if (moviesToShow.length === 0) {
-                movieGrid.innerHTML = '<p style="text-align:center;">No movies found.</p>';
+                movieGrid.innerHTML = '<p>No movies found.</p>';
             } else {
                 moviesToShow.forEach(movie => {
                     const card = document.createElement('div');
@@ -144,8 +124,7 @@ class MovieWebsite {
                         <div class="movie-info">
                             <div class="movie-title">${movie.title}</div>
                             <div class="movie-description">${movie.description}</div>
-                        </div>
-                    `;
+                        </div>`;
                     card.addEventListener('click', () => {
                         window.open(movie.downloadUrl, '_blank');
                     });
@@ -154,69 +133,59 @@ class MovieWebsite {
             }
 
             loading.style.display = 'none';
-        }, 300);
+        });
     }
 
     setupPagination() {
         const pagination = document.getElementById('pagination');
         const totalPages = Math.ceil(this.filteredMovies.length / this.moviesPerPage);
         pagination.innerHTML = '';
-
         if (totalPages <= 1) return;
 
-        const createPageButton = (text, page) => {
-            const btn = document.createElement('button');
-            btn.textContent = text;
-            btn.className = 'page-btn';
-            btn.addEventListener('click', () => {
-                this.currentPage = page;
-                this.displayMovies();
-                this.setupPagination();
-            });
-            return btn;
-        };
-
         if (this.currentPage > 1) {
-            pagination.appendChild(createPageButton('‹', this.currentPage - 1));
+            pagination.appendChild(this.createPageButton('‹', this.currentPage - 1));
         }
 
         for (let i = 1; i <= totalPages; i++) {
-            const btn = createPageButton(i, i);
+            const btn = this.createPageButton(i, i);
             if (i === this.currentPage) btn.classList.add('active');
             pagination.appendChild(btn);
         }
 
         if (this.currentPage < totalPages) {
-            pagination.appendChild(createPageButton('›', this.currentPage + 1));
+            pagination.appendChild(this.createPageButton('›', this.currentPage + 1));
         }
     }
 
-    async addMovie() {
+    createPageButton(text, page) {
+        const btn = document.createElement('button');
+        btn.textContent = text;
+        btn.className = 'page-btn';
+        btn.addEventListener('click', () => {
+            this.currentPage = page;
+            this.displayMovies();
+            this.setupPagination();
+        });
+        return btn;
+    }
+
+    addMovie() {
         const titleInput = document.getElementById('movieTitle');
         const descriptionInput = document.getElementById('movieDescription');
         const inputMethod = document.querySelector('input[name="inputMethod"]:checked').value;
 
         const title = titleInput.value.trim();
-        const description = descriptionInput.value.trim() || "No description.";
-
+        const description = descriptionInput.value.trim() || 'No description.';
         let bannerUrl, downloadUrl;
 
         if (inputMethod === 'url') {
             bannerUrl = document.getElementById('bannerUrl').value.trim();
             downloadUrl = document.getElementById('downloadUrl').value.trim();
-
-            if (!bannerUrl || !downloadUrl) {
-                alert('Enter banner and download URLs.');
-                return;
-            }
+            if (!bannerUrl || !downloadUrl) return alert('Enter banner and download URLs.');
         } else {
             const bannerFile = document.getElementById('movieBanner').files[0];
             const movieFile = document.getElementById('movieFile').files[0];
-            if (!bannerFile || !movieFile) {
-                alert('Select both files.');
-                return;
-            }
-
+            if (!bannerFile || !movieFile) return alert('Select both files.');
             bannerUrl = URL.createObjectURL(bannerFile);
             downloadUrl = URL.createObjectURL(movieFile);
         }
@@ -229,7 +198,7 @@ class MovieWebsite {
             dateAdded: new Date().toISOString()
         };
 
-        await this.saveMovieToFirestore(newMovie);
+        this.saveMovieToFirestore(newMovie);
 
         document.getElementById('adminForm').reset();
         document.querySelector('input[value="url"]').checked = true;
@@ -240,24 +209,18 @@ class MovieWebsite {
     }
 
     displayAdminMovies() {
-        const adminMovieList = document.getElementById('adminMovieList');
-        adminMovieList.innerHTML = '';
-
+        const list = document.getElementById('adminMovieList');
+        list.innerHTML = '';
         if (this.movies.length === 0) {
-            adminMovieList.innerHTML = '<p>No movies added yet.</p>';
+            list.innerHTML = '<p>No movies added yet.</p>';
             return;
         }
 
         this.movies.forEach(movie => {
             const div = document.createElement('div');
             div.className = 'admin-movie-item';
-            div.innerHTML = `
-                <div>
-                    <strong>${movie.title}</strong><br>
-                    <small>${movie.description}</small>
-                </div>
-            `;
-            adminMovieList.appendChild(div);
+            div.innerHTML = `<div><strong>${movie.title}</strong><br><small>${movie.description}</small></div>`;
+            list.appendChild(div);
         });
     }
 
@@ -280,17 +243,15 @@ class MovieWebsite {
     }
 
     isAdminLoggedIn() {
-        const isLoggedIn = localStorage.getItem('adminLoggedIn');
-        const loginTime = localStorage.getItem('adminLoginTime');
-        if (!isLoggedIn || !loginTime) return false;
+        const logged = localStorage.getItem('adminLoggedIn');
+        const time = localStorage.getItem('adminLoginTime');
+        if (!logged || !time) return false;
 
-        const now = Date.now();
-        if (now - parseInt(loginTime) > 3600000) {
+        if (Date.now() - parseInt(time) > 3600000) {
             this.logout();
             return false;
         }
-
-        return isLoggedIn === 'true';
+        return logged === 'true';
     }
 
     logout() {
@@ -315,6 +276,14 @@ class MovieWebsite {
             btn.textContent = 'Admin Panel';
             btn.onclick = null;
         }
+    }
+
+    debounce(func, wait) {
+        let timeout;
+        return function (...args) {
+            clearTimeout(timeout);
+            timeout = setTimeout(() => func.apply(this, args), wait);
+        };
     }
 }
 
